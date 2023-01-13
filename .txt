@@ -1,0 +1,105 @@
+#ThinkorSwim doesn't have a specific file type for their thinkScript language, so .txt will have to do
+input price = close;
+input price2 = open;
+input deviations1 = 1.0;
+input deviations2 = 2.0;
+input deviations3 = 3.0;
+input fullRange = Yes;
+input length = 21;
+
+def regression;
+def stdDeviation;
+if (fullRange) {
+    regression = InertiaAll(price);
+    stdDeviation = StDevAll(price);
+} else {
+    regression = InertiaAll(price, length);
+    stdDeviation = StDevAll(price, length);
+}
+
+plot UpperLine = regression + deviations1 * stdDeviation;
+plot MiddleLine = regression;
+plot LowerLine = regression - deviations1 * stdDeviation;
+plot UpperLine2 = regression + deviations2 * stdDeviation;
+plot LowerLine2 = regression - deviations2 * stdDeviation;
+plot UpperLine3 = regression + deviations3 * stdDeviation;
+plot LowerLine3 = regression - deviations3 * stdDeviation;
+
+UpperLine.SetDefaultColor(GetColor(8));
+MiddleLine.SetDefaultColor(GetColor(8));
+LowerLine.SetDefaultColor(GetColor(8));
+UpperLine2.SetDefaultColor(GetColor(8));
+LowerLine2.SetDefaultColor(GetColor(8));
+
+UpperLine3.DefineColor("Up", GetColor(1));
+UpperLine3.DefineColor("Down", GetColor(0));
+UpperLine3.AssignValueColor(if UpperLine3 > UpperLine3[1] then UpperLine3.Color("Up") else UpperLine3.Color("Down"));
+
+LowerLine3.DefineColor("Up", GetColor(1));
+LowerLine3.DefineColor("Down", GetColor(0));
+LowerLine3.AssignValueColor(if LowerLine3 > LowerLine3[1] then LowerLine3.Color("Up") else LowerLine3.Color("Down"));
+
+
+# Added Bubbles that mark and entry and exit price. 
+
+# Altered default settings for values that made more sense on Intraday Futures. Added Color and ColorBars. 
+
+#Hint:Supertrend Indicator: shows trend direction and gives buy or sell signals according to that. It is based on a combination of the average price rate in the current period along with a volatility indicator. The ATR indicator is most commonly used as volatility indicator. The values are calculated as follows: 
+
+# Up = (HIGH + LOW) / 2 + Multiplier * ATR 
+
+# Down = (HIGH + LOW) / 2 – Multiplier * ATR 
+
+# When the change of trend occurs, the indicator flips 
+
+  
+
+input AtrMult = 1.0; 
+
+input nATR = 4; 
+
+input AvgType = AverageType.HULL; 
+
+input PaintBars = yes; 
+
+  
+
+def ATR = MovingAverage(AvgType, TrueRange(high, close, low), nATR); 
+
+def UP = HL2 + (AtrMult * ATR); 
+
+def DN = HL2 + (-AtrMult * ATR); 
+
+def ST = if close < ST[1] then UP else DN; 
+
+plot SuperTrend = ST; 
+
+SuperTrend.AssignValueColor(if close < ST then Color.RED else Color.GREEN); 
+
+AssignPriceColor(if PaintBars and close < ST  
+
+                 then Color.RED  
+
+                 else if PaintBars and close > ST  
+
+                      then Color.GREEN  
+
+                      else Color.CURRENT); 
+
+AddChartBubble(close crosses below ST, low[1], low[1], color.Dark_Gray); 
+
+AddChartBubble(close crosses above ST, high[1], high[1], color.Dark_Gray, no); 
+
+# End Code SuperTrend 
+
+
+# Custom orders that are "paper-traded" by the algorithm
+# Bullish
+AddOrder(OrderType.BUY_TO_OPEN, close crosses above ST and open <= LowerLine, close);
+AddOrder(OrderType.SELL_TO_CLOSE, close crosses below ST or open >= UpperLine, close);
+
+# Bearish
+AddOrder(OrderType.SELL_TO_OPEN, close crosses below ST and open >= UpperLine, close);
+AddOrder(OrderType.BUY_TO_CLOSE, close crosses above ST or open <= LowerLine, close);
+
+# End Code 
